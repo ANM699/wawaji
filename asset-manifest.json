@@ -1,0 +1,19 @@
+{
+  "files": {
+    "main.css": "./static/css/main.0a98f0e9.css",
+    "main.js": "./static/js/main.10a9920f.js",
+    "static/media/music.mp3": "./static/media/music.6d6a38a152231bb47f3f.mp3",
+    "static/media/instruction.png": "./static/media/instruction.c209c84ba71685c88efa.png",
+    "static/media/start_game.png": "./static/media/start_game.1fc5f6652df24be63dd6.png",
+    "static/media/recharge.png": "./static/media/recharge.07721923e21e15793eb0.png",
+    "static/media/grap.png": "./static/media/grap.52795db4d8d718d90630.png",
+    "static/media/grap_disable.png": "./static/media/grap_disable.fb98e322bc97aab41016.png",
+    "index.html": "./index.html",
+    "main.0a98f0e9.css.map": "./static/css/main.0a98f0e9.css.map",
+    "main.10a9920f.js.map": "./static/js/main.10a9920f.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.0a98f0e9.css",
+    "static/js/main.10a9920f.js"
+  ]
+}
