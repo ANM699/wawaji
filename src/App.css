@@ -1,28 +1,23 @@
-video:focus {
-  outline: -webkit-focus-ring-color auto 0px;
-}
-
-.overlayContent {
-  @apply flex flex-col items-center justify-evenly font-semibold px-5;
-  position: absolute;
-  top: 50%;
-  left: 50%;
+.overlayDialog {
+  @apply flex flex-col items-center justify-evenly px-5 rounded-lg bg-white absolute top-1/2 left-1/2 font-semibold;
   width: 300px;
   height: 150px;
   margin-top: -75px;
   margin-left: -150px;
-  background: white;
-  border-radius: 8px;
   color: #565656;
 }
 
+.overlayContainer {
+  @apply flex flex-col items-center mx-2 rounded-lg absolute overflow-hidden left-0 right-0;
+  left: 0;
+  right: 0;
+  margin-top: 14vh;
+  background: #f5f6fa;
+}
 .dialogButton {
-  font-size: 18px;
-  line-height: 18px;
+  @apply text-lg leading-none rounded-2xl p-4;
   background: #f7f7f7;
   border: 1px solid #565656;
-  border-radius: 18px;
-  padding: 14px;
 }
 
 .right {

@@ -2,12 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* @apply flex justify-center; */
+  font-size: 16px;
+}
 body {
-  @apply text-base !important;
+  @apply !text-base min-h-screen;
+  color: #6a6868 !important;
   background: linear-gradient(
       180deg,
       #ffbfbf 0%,
       rgba(252, 167, 167, 0.46) 100%
     )
-    no-repeat;
+    repeat-x;
+}
+
+video:focus {
+  outline: -webkit-focus-ring-color auto 0px;
 }
