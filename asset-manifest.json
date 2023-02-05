@@ -1,19 +1,20 @@
 {
   "files": {
-    "main.css": "./static/css/main.742c9c6c.css",
-    "main.js": "./static/js/main.ad5f145f.js",
+    "main.css": "./static/css/main.78638a0b.css",
+    "main.js": "./static/js/main.caff81d3.js",
     "static/media/music.mp3": "./static/media/music.6d6a38a152231bb47f3f.mp3",
     "static/media/instruction.png": "./static/media/instruction.c209c84ba71685c88efa.png",
     "static/media/start_game.png": "./static/media/start_game.1fc5f6652df24be63dd6.png",
+    "static/media/waitting.png": "./static/media/waitting.4498f891ecadecf0ce68.png",
     "static/media/recharge.png": "./static/media/recharge.07721923e21e15793eb0.png",
     "static/media/grap.png": "./static/media/grap.52795db4d8d718d90630.png",
     "static/media/grap_disable.png": "./static/media/grap_disable.fb98e322bc97aab41016.png",
     "index.html": "./index.html",
-    "main.742c9c6c.css.map": "./static/css/main.742c9c6c.css.map",
-    "main.ad5f145f.js.map": "./static/js/main.ad5f145f.js.map"
+    "main.78638a0b.css.map": "./static/css/main.78638a0b.css.map",
+    "main.caff81d3.js.map": "./static/js/main.caff81d3.js.map"
   },
   "entrypoints": [
-    "static/css/main.742c9c6c.css",
-    "static/js/main.ad5f145f.js"
+    "static/css/main.78638a0b.css",
+    "static/js/main.caff81d3.js"
   ]
 }
