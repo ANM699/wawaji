@@ -1,20 +1,20 @@
 {
   "files": {
-    "main.css": "./static/css/main.e039da4d.css",
-    "main.js": "./static/js/main.b6b0804c.js",
+    "main.css": "./static/css/main.ed79e983.css",
+    "main.js": "./static/js/main.d2a81526.js",
     "static/media/music.mp3": "./static/media/music.a156d5bd843e1c6182fa.mp3",
     "static/media/instruction.png": "./static/media/instruction.c209c84ba71685c88efa.png",
-    "static/media/start_game.png": "./static/media/start_game.1fc5f6652df24be63dd6.png",
-    "static/media/waitting.png": "./static/media/waitting.4498f891ecadecf0ce68.png",
-    "static/media/recharge.png": "./static/media/recharge.07721923e21e15793eb0.png",
-    "static/media/grap.png": "./static/media/grap.52795db4d8d718d90630.png",
-    "static/media/grap_disable.png": "./static/media/grap_disable.fb98e322bc97aab41016.png",
+    "static/media/waitting.png": "./static/media/waitting.b72d3bf4fdee43d695aa.png",
+    "static/media/start_game.png": "./static/media/start_game.f235a764084ebb624ff3.png",
+    "static/media/recharge.png": "./static/media/recharge.4479c88a40c38b29c09f.png",
+    "static/media/grap_disable.png": "./static/media/grap_disable.c8c9c6a46cee4da7872b.png",
+    "static/media/grap.png": "./static/media/grap.7a55090b33696bebde38.png",
     "index.html": "./index.html",
-    "main.e039da4d.css.map": "./static/css/main.e039da4d.css.map",
-    "main.b6b0804c.js.map": "./static/js/main.b6b0804c.js.map"
+    "main.ed79e983.css.map": "./static/css/main.ed79e983.css.map",
+    "main.d2a81526.js.map": "./static/js/main.d2a81526.js.map"
   },
   "entrypoints": [
-    "static/css/main.e039da4d.css",
-    "static/js/main.b6b0804c.js"
+    "static/css/main.ed79e983.css",
+    "static/js/main.d2a81526.js"
   ]
 }
