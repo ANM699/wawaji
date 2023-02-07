@@ -6,7 +6,7 @@ export default function ImgButton({ children, enable = true }) {
     <div
       onPointerDown={() => setPd(true)}
       onPointerUp={() => setPd(false)}
-      style={{ transform: pd ? "scale(0.96)" : "scale(1)" }}
+      style={{ transform: pd ? "scale(0.96)" : "", display: "inline-block" }}
     >
       {children}
     </div>

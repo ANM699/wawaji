@@ -1,13 +1,7 @@
 import React from "react";
 import CustomButton from "./custom-button";
-import up from "../assets/up.png";
-import up_disable from "../assets/up_disable.png";
-import down from "../assets/down.png";
-import down_disable from "../assets/down_disable.png";
-import left from "../assets/left.png";
-import left_disable from "../assets/left_disable.png";
-import right from "../assets/right.png";
-import right_disable from "../assets/right_disable.png";
+import arrow from "../assets/arrow.png";
+import arrow_disable from "../assets/arrow_disable.png";
 import grap from "../assets/grap.png";
 import grap_disable from "../assets/grap_disable.png";
 export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
@@ -19,8 +13,8 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
             onClick={() => {
               enable && handleCmd("LEFT");
             }}
-            style={{ width: 70, height: 70 }}
-            src={enable ? left : left_disable}
+            style={{ width: 70, height: 70, transform: "rotate(270deg)" }}
+            src={enable ? arrow : arrow_disable}
             alt=""
           />
         </CustomButton>
@@ -31,7 +25,7 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
                 enable && handleCmd("UP");
               }}
               style={{ width: 70, height: 70 }}
-              src={enable ? up : up_disable}
+              src={enable ? arrow : arrow_disable}
               alt=""
             />
           </CustomButton>
@@ -40,8 +34,8 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
               onClick={() => {
                 enable && handleCmd("DOWN");
               }}
-              style={{ width: 70, height: 70 }}
-              src={enable ? down : down_disable}
+              style={{ width: 70, height: 70, transform: "rotate(180deg)" }}
+              src={enable ? arrow : arrow_disable}
               alt=""
             />
           </CustomButton>
@@ -51,8 +45,8 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
             onClick={() => {
               enable && handleCmd("RIGHT");
             }}
-            style={{ width: 70, height: 70 }}
-            src={enable ? right : right_disable}
+            style={{ width: 70, height: 70, transform: "rotate(90deg)" }}
+            src={enable ? arrow : arrow_disable}
             alt=""
           />
         </CustomButton>

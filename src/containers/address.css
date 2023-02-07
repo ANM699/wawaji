@@ -1,0 +1,11 @@
+.actionButton {
+  @apply leading-none rounded-2xl p-2 w-32 text-center;
+  background: #dc744d;
+  border: 1px solid #dc744d;
+  color: white;
+}
+.backButton {
+  @apply leading-none rounded-2xl p-2 w-32 text-center;
+  background: #f7f7f7;
+  border: 1px solid #565656;
+}

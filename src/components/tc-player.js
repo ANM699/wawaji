@@ -10,7 +10,7 @@ export const TCPlayer = (props) => {
         "tc-player",
         {
           aspectRatio: "3:4",
-          autoplay: true,
+          autoplay: "muted",
           muted: true,
           controls: false,
           responsive: true,
@@ -24,15 +24,6 @@ export const TCPlayer = (props) => {
       ));
     }
   }, [videoRef]);
-  React.useEffect(() => {
-    const player = playerRef.current;
-    return () => {
-      if (player) {
-        player.dispose();
-        playerRef.current = null;
-      }
-    };
-  }, [playerRef]);
 
   return <video ref={videoRef} id="tc-player" playsInline></video>;
 };
