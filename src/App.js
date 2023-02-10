@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Cookies from "js-cookie";
 import { Mask } from "antd-mobile";
 import Main from "./containers/main";
-import Address from "./containers/address";
-import { authUrl, getSid } from "./api/index";
+import { authUrl, getSid, ws } from "./api/index";
 
 const getUrlParams = (url) => {
   let queryString = url.split("?")[1];
@@ -20,46 +19,70 @@ const getUrlParams = (url) => {
 };
 
 function App() {
+  const websocket = useRef(null);
   //用户状态
   const [hasLogin, setHasLogin] = useState(false);
-  //娃娃机状态(ONLINE:在线,OFFLINE:离线,BUSY:使用中,FREE:空闲)
-  const [machineState, setMachineState] = useState("FREE");
-  //路由
-  const [route, setRoute] = useState("main");
 
   useEffect(() => {
     const { code } = getUrlParams(window.location.search);
     const sid = Cookies.get("sid");
-    if (!sid && code) {
-      //有code说明已经同意授权
-      Cookies.set("sid", "test");
+    if (sid) {
       setHasLogin(true);
-      // getSid(code).then((res) => {
-      //   Cookies.set("sid", res.sid);
-      //   setHasLogin(true);
-      // });
+      initSocket();
+    } else if (!sid && code) {
+      //有code说明已经同意授权
+      getSid(code).then((res) => {
+        const userInfo = {
+          uid: res.user.userId,
+          avatar: res.user.avatar,
+          nickname: res.user.nickname,
+        };
+        Cookies.set("userInfo", JSON.stringify(userInfo));
+        Cookies.set("sid", res.sid);
+        setHasLogin(true);
+        initSocket();
+      });
     }
+    return () => {
+      websocket.current && websocket.current.close();
+    };
   }, []);
 
   /**
-   * 连接socket,并注册事件
+   * 注册socket。
+   * 在App中注册而不在Main中，是为了避免用户切换到地址页面时socket实例销毁。
    */
-  const init = () => {};
+  const initSocket = () => {
+    if (!websocket.current || websocket.current.readyState === 3) {
+      websocket.current = new WebSocket(ws);
+      websocket.current.onopen = () => {
+        console.log("WebSocket连接成功.");
+        const msg = {
+          cmd: "request_status",
+          ...JSON.parse(Cookies.get("userInfo")),
+        };
+        websocket.current.send(JSON.stringify(msg));
+      };
+      websocket.current.onclose = (event) => {
+        console.log("WebSocket关闭: ", event);
+        const msg = {
+          cmd: "exit_room",
+          ...JSON.parse(Cookies.get("userInfo")),
+        };
+        websocket.current.send(JSON.stringify(msg));
+      };
 
-  const visible = () => {
-    const sid = Cookies.get("sid");
-    if (sid) return false;
-    return !hasLogin;
+      websocket.current.onerror = (event) => {
+        console.log("WebSocket发生错误: ", event);
+      };
+    }
   };
+
   return (
     <>
-      {route === "main" ? (
-        <Main route={setRoute} machineState="FREE" />
-      ) : (
-        <Address route={setRoute} />
-      )}
+      <Main ws={websocket.current} />
       <Mask
-        visible={visible()}
+        visible={!hasLogin}
         opacity={0}
         disableBodyScroll={false}
         onMaskClick={() => window.location.replace(authUrl)}

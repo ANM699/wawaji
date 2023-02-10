@@ -4,6 +4,13 @@ import arrow from "../assets/arrow.png";
 import arrow_disable from "../assets/arrow_disable.png";
 import grap from "../assets/grap.png";
 import grap_disable from "../assets/grap_disable.png";
+
+const UP = 0,
+  DOWN = 1,
+  LEFT = 2,
+  RIGHT = 3,
+  GRAP = 4;
+
 export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
   return (
     <>
@@ -11,7 +18,7 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
         <CustomButton enable={enable}>
           <img
             onClick={() => {
-              enable && handleCmd("LEFT");
+              enable && handleCmd(LEFT);
             }}
             style={{ width: 70, height: 70, transform: "rotate(270deg)" }}
             src={enable ? arrow : arrow_disable}
@@ -22,7 +29,7 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
           <CustomButton enable={enable}>
             <img
               onClick={() => {
-                enable && handleCmd("UP");
+                enable && handleCmd(DOWN);
               }}
               style={{ width: 70, height: 70 }}
               src={enable ? arrow : arrow_disable}
@@ -32,7 +39,7 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
           <CustomButton enable={enable}>
             <img
               onClick={() => {
-                enable && handleCmd("DOWN");
+                enable && handleCmd(UP);
               }}
               style={{ width: 70, height: 70, transform: "rotate(180deg)" }}
               src={enable ? arrow : arrow_disable}
@@ -43,7 +50,7 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
         <CustomButton enable={enable}>
           <img
             onClick={() => {
-              enable && handleCmd("RIGHT");
+              enable && handleCmd(RIGHT);
             }}
             style={{ width: 70, height: 70, transform: "rotate(90deg)" }}
             src={enable ? arrow : arrow_disable}
@@ -56,7 +63,7 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
           <div
             className=" relative "
             onClick={() => {
-              enable && handleCmd("GRAP");
+              enable && handleCmd(GRAP);
             }}
           >
             <img

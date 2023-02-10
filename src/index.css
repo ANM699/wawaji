@@ -3,19 +3,19 @@
 @tailwind utilities;
 
 :root {
-  /* @apply flex justify-center; */
   font-size: 16px;
 }
 :root:root {
   --adm-color-primary: #fa4f23;
 }
+
 body {
   @apply !text-base min-h-screen;
   color: #6a6868 !important;
-  /* background: linear-gradient(
+  background: linear-gradient(
       180deg,
       #ffbfbf 0%,
       rgba(252, 167, 167, 0.46) 100%
     )
-    repeat-x; */
+    repeat-x;
 }

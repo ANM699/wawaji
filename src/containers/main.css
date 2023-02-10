@@ -3,28 +3,19 @@ video:focus {
 }
 
 .main {
-  @apply flex flex-col  p-2;
-  background: linear-gradient(
-      180deg,
-      #ffbfbf 0%,
-      rgba(252, 167, 167, 0.46) 100%
-    )
-    repeat-x;
+  @apply flex flex-col  p-2 m-auto;
+  max-width: 720px;
 }
 
 .overlayDialog {
-  @apply flex flex-col items-center justify-evenly px-5 rounded-lg bg-white absolute top-1/2 left-1/2 font-semibold;
+  @apply flex flex-col items-center justify-evenly px-5 rounded-lg bg-white  font-semibold;
   width: 300px;
   height: 150px;
-  margin-top: -75px;
-  margin-left: -150px;
   color: #565656;
 }
 
 .overlayContainer {
   @apply flex flex-col items-center mx-2 rounded-lg absolute overflow-hidden left-0 right-0;
-  left: 0;
-  right: 0;
   margin-top: 14vh;
   background: #f5f6fa;
 }
@@ -38,4 +29,20 @@ video:focus {
   background: #dc744d;
   border: 1px solid #dc744d;
   color: white;
+}
+
+.gameStartImg {
+  width: 187px;
+}
+
+.rechargeImg {
+  width: 110px;
+}
+
+.videoImg {
+  width: 25px;
+}
+
+.wifiImg {
+  width: 12px;
 }

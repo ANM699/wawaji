@@ -15,11 +15,6 @@ export default function Address({ route }) {
       color: "light",
       onClick: () => {},
     },
-    // {
-    //   key: "mute",
-    //   text: "免打扰",
-    //   color: "warning",
-    // },
     {
       key: "delete",
       text: "删除",

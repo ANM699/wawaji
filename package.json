@@ -1,9 +1,10 @@
 {
   "name": "wawaji",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "homepage": "./",
   "private": true,
   "dependencies": {
+    "@craco/craco": "^7.0.0",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
@@ -20,10 +21,10 @@
     "weixin-js-sdk": "^1.6.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
     "deploy": "gh-pages -d build",
-    "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -46,6 +47,7 @@
   },
   "devDependencies": {
     "gh-pages": "^5.0.0",
+    "postcss-pxtorem": "^6.0.0",
     "tailwindcss": "^3.2.4"
   }
 }

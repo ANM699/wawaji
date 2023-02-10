@@ -2,30 +2,29 @@ import React from "react";
 export const TCPlayer = (props) => {
   const videoRef = React.useRef(null);
   const playerRef = React.useRef(null);
-  const { onReady } = props;
+  const { onReady, id } = props;
 
   React.useEffect(() => {
     if (!playerRef.current) {
       const player = (playerRef.current = window.TCPlayer(
-        "tc-player",
+        id,
         {
-          aspectRatio: "3:4",
-          autoplay: "muted",
-          muted: true,
           controls: false,
+          aspectRatio: "3:4",
+          autoplay: true,
+          muted: true,
           responsive: true,
           preload: "auto",
           errorDisplay: true,
         },
         () => {
-          console.log("player is ready");
           onReady && onReady(player);
         }
       ));
     }
   }, [videoRef]);
 
-  return <video ref={videoRef} id="tc-player" playsInline></video>;
+  return <video ref={videoRef} id={id} playsInline></video>;
 };
 
 export default TCPlayer;
