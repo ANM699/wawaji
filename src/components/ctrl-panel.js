@@ -20,7 +20,11 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
             onClick={() => {
               enable && handleCmd(LEFT);
             }}
-            style={{ width: 70, height: 70, transform: "rotate(270deg)" }}
+            style={{
+              width: "4.375rem",
+              height: "4.375rem",
+              transform: "rotate(270deg)",
+            }}
             src={enable ? arrow : arrow_disable}
             alt=""
           />
@@ -31,7 +35,7 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
               onClick={() => {
                 enable && handleCmd(DOWN);
               }}
-              style={{ width: 70, height: 70 }}
+              style={{ width: "4.375rem", height: "4.375rem" }}
               src={enable ? arrow : arrow_disable}
               alt=""
             />
@@ -41,7 +45,11 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
               onClick={() => {
                 enable && handleCmd(UP);
               }}
-              style={{ width: 70, height: 70, transform: "rotate(180deg)" }}
+              style={{
+                width: "4.375rem",
+                height: "4.375rem",
+                transform: "rotate(180deg)",
+              }}
               src={enable ? arrow : arrow_disable}
               alt=""
             />
@@ -52,7 +60,11 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
             onClick={() => {
               enable && handleCmd(RIGHT);
             }}
-            style={{ width: 70, height: 70, transform: "rotate(90deg)" }}
+            style={{
+              width: "4.375rem",
+              height: "4.375rem",
+              transform: "rotate(90deg)",
+            }}
             src={enable ? arrow : arrow_disable}
             alt=""
           />
@@ -67,7 +79,7 @@ export default function CtrlPanel({ enable = true, handleCmd, timeLeft = 0 }) {
             }}
           >
             <img
-              style={{ width: 90, height: 90 }}
+              style={{ width: "5.625rem", height: "5.625rem" }}
               src={enable ? grap : grap_disable}
               alt=""
             />

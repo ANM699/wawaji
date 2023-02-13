@@ -20,6 +20,9 @@ import {
   createOrder,
   getMyAccount,
   getWxConfig,
+  getRecords,
+  getMyDealRecords,
+  grabReward,
 } from "../api";
 import TCPlayer from "../components/tc-player";
 import CustomButton from "../components/custom-button";
@@ -37,6 +40,10 @@ import wifi_red from "../assets/wifi_red.png";
 import music from "../assets/music.mp3";
 import "./main.css";
 
+function name(str) {
+  return str.length <= 1 ? str + "*" : str.replace(/(^.).*(.$)/, "$1*$2");
+}
+
 function Main({ ws }) {
   const userInfo = Cookies.get("userInfo")
     ? JSON.parse(Cookies.get("userInfo"))
@@ -45,15 +52,16 @@ function Main({ ws }) {
   const playerRef2 = useRef(null);
   const audioRef = useRef(null);
   const tickRef = useRef(null);
+  const curOrderIdRef = useRef(null);
   const accountRef = useRef(0);
   const costRef = useRef(0);
-  // const curSrc = useRef("live_url");
   const [curSrc, setCurSrc] = useState(1);
-  const [room, setRoom] = useState({});
   const [cost, setCost] = useState(0);
   const [curUser, setCurUser] = useState({});
   const [curSpecGoodsId, setCurSpecGoodsId] = useState(0);
   const [account, setAccount] = useState(0);
+  const [records, setRecords] = useState([]);
+  const [myDealRecords, setMyDealRecords] = useState([]);
   const [virtual, setVirtual] = useState([]);
   const [users, setUsers] = useState({ count: 0, list: [] });
   const [goods, setGoods] = useState({});
@@ -65,31 +73,10 @@ function Main({ ws }) {
   const [showPopup, setShowPopup] = useState(false);
   //游戏状态(GAMEREADY:不在游戏中,INGAME:游戏中)
   const [gameState, setGameState] = useState("GAMEREADY");
-  //娃娃机状态(OFFLINE:离线,BUSY:使用中,FREE:空闲)
+  //娃娃机状态(OFFLINE:离线,BUSY:使用中,FREE:空闲;ERROR:故障)
   const [machineState, setMachineState] = useState("FREE");
   //游戏结果(SUCCESS,FAILED)
   const [gameRes, setGameRes] = useState(null);
-
-  // useEffect(() => {
-  //   if (!room.id) return;
-  //   getWxConfig(window.location.href).then((res) => {
-  //     if (res.code === 0) {
-  //       const { sign, noncestr, timestamp } = res.data;
-  //       //配置微信sdk
-  //       wx.config({
-  //         debug: false, // 开启调试模式,调用的所有 api 的返回值会在客户端 alert 出来，若要查看传入的参数，可以在 pc 端打开，参数信息会通过 log 打出，仅在 pc 端时才会打印。
-  //         appId: appId, // 必填，公众号的唯一标识
-  //         timestamp, // 必填，生成签名的时间戳
-  //         nonceStr: noncestr, // 必填，生成签名的随机串
-  //         signature: sign, // 必填，签名
-  //         jsApiList: ["chooseWXPay", "openAddress"],
-  //       });
-  //       wx.ready(() => {
-  //         playerRef.current.src(room[curSrc.current]);
-  //       });
-  //     }
-  //   });
-  // }, [room]);
 
   useEffect(() => {
     if (ws) {
@@ -97,11 +84,19 @@ function Main({ ws }) {
       ws.onmessage = (event) => {
         handleMsg(event.data);
       };
+      //获取游戏记录
+      getRecords().then((res) => {
+        res.code === 0 && setRecords(res.data);
+      });
+      //获取我的抓中记录
+      getMyDealRecords().then((res) => {
+        res.code === 0 && setMyDealRecords(res.data);
+      });
       //获取房间相关信息
       getRoomInfo().then((res) => {
         if (res.code === 0) {
           const { merchant_id, gift_id, once_money } = res.data;
-          setRoom(res.data);
+          // setRoom(res.data);
           setCost(once_money);
           costRef.current = once_money;
           getAllSepcGoodsInfo(merchant_id).then((res) => {
@@ -113,7 +108,7 @@ function Main({ ws }) {
           getGoodsInfo(gift_id).then((res) => {
             res.code === 0 && setGoods(res.data);
           });
-          getWxConfig(window.location.href).then((r) => {
+          getWxConfig(window.location.href.split("#")[0]).then((r) => {
             if (r.code === 0) {
               const { sign, noncestr, timestamp } = r.data;
               //配置微信sdk
@@ -153,7 +148,8 @@ function Main({ ws }) {
         const newTimeLeft = timeLeft - 1;
         setTimeLeft(newTimeLeft);
         if (newTimeLeft === 0) {
-          gameOver();
+          // gameOver();
+          handleCmd(4);
         }
       }, 1000);
     }
@@ -161,18 +157,13 @@ function Main({ ws }) {
 
   const handlePlayerReady = (player) => {
     playerRef.current = player;
-    // player.src(room[curSrc.current]);
   };
   const handlePlayerReady2 = (player) => {
     playerRef2.current = player;
-    // player.src(room[curSrc.current]);
   };
 
   const toggleCamera = () => {
-    // curSrc.current = curSrc.current === "live_url" ? "live_url2" : "live_url";
     setCurSrc(curSrc === 1 ? 2 : 1);
-    // playerRef.current.src(room[curSrc.current]);
-    // playerRef.current.play();
   };
   /**
    *
@@ -195,7 +186,8 @@ function Main({ ws }) {
     console.log("收到消息：", data, Date.now());
     const { timestamp } = data;
     if (timestamp) {
-      const delay = Date.now() - timestamp;
+      let delay = Date.now() - timestamp;
+      if (delay < 0) delay = Math.floor(Math.random() * 100);
       setDelay(delay);
       if (delay > 200) {
         Toast.show({
@@ -214,7 +206,8 @@ function Main({ ws }) {
         setShowGoods(false);
         setGameRes(null);
         setTimeLeft(30);
-        setAccount(accountRef.current - costRef.current);
+        accountRef.current = accountRef.current - costRef.current;
+        setAccount(accountRef.current);
         return;
       } else if (ret === -1) {
         //金币不足
@@ -270,14 +263,27 @@ function Main({ ws }) {
         return;
       } else if (status === "leisure") {
         setMachineState("FREE");
+        //更新游戏记录
+        getRecords().then((res) => {
+          res.code === 0 && setRecords(res.data);
+        });
         return;
       } else if (status === "offline") {
+        setMachineState("OFFLINE");
         Toast.show({
           content: "机器不在线",
           maskClickable: false,
           duration: 1000,
         });
-        setMachineState("OFFLINE");
+        return;
+      } else if (status === "error") {
+        setMachineState("ERROR");
+        const { desc } = data;
+        Toast.show({
+          content: desc,
+          maskClickable: false,
+          duration: 1000,
+        });
         return;
       }
     }
@@ -289,6 +295,13 @@ function Main({ ws }) {
     //收到游戏结果
     if (data.cmd === "game_ret") {
       setGameRes(data.ret === 0 ? "FAILED" : "SUCCESS");
+      if (data.ret === 1) {
+        curOrderIdRef.current = data.orderId;
+        //更新我的抓中记录
+        getMyDealRecords().then((r) => {
+          r.code === 0 && setMyDealRecords(r.data);
+        });
+      }
       return;
     }
   };
@@ -300,7 +313,7 @@ function Main({ ws }) {
       specGoodsId: specId ? specId : curSpecGoodsId,
       ...userInfo,
     };
-    ws.send(JSON.stringify(msg));
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
   };
   const gameOver = () => {
     setTimeLeft(0);
@@ -326,22 +339,38 @@ function Main({ ws }) {
       });
     }
   };
-  const openAddress = () => {
+  const openAddress = (orderId) => {
     gameReady();
+    if (!orderId) return;
     wx.openAddress({
       success: function (res) {
-        const {
-          userName, //收货人姓名
-          postalCode, //邮编
-          provinceName, //省
-          cityName, //市
-          countryName, //国
-          detailInfo, //详细收货地址信息
-          nationalCode, //收货地址国家码
-          telNumber, //收货人手机号码
-        } = res;
-        const str = userName + provinceName + cityName + detailInfo + telNumber;
-        Toast.show(str);
+        const data = {
+          orderId,
+          userName: res.userName,
+          telNumber: res.telNumber,
+          provinceName: res.provinceName,
+          cityName: res.cityName,
+          detailInfo: res.detailInfo,
+        };
+        grabReward(data).then((res) => {
+          if (res.code === 0) {
+            Toast.show({
+              content: "等待发货",
+              maskClickable: false,
+              duration: 1000,
+            });
+            //更新我的抓中记录
+            getMyDealRecords().then((r) => {
+              r.code === 0 && setMyDealRecords(r.data);
+            });
+          } else {
+            Toast.show({
+              content: res.error,
+              maskClickable: false,
+              duration: 1000,
+            });
+          }
+        });
       },
     });
   };
@@ -387,7 +416,7 @@ function Main({ ws }) {
   };
 
   return (
-    <>
+    <div className=" fixed h-screen w-full overflow-y-scroll">
       <div className="main">
         <div
           className=" rounded-2xl overflow-hidden relative"
@@ -396,7 +425,6 @@ function Main({ ws }) {
             transform: "translate3d(0,0,0)",
           }}
         >
-          {/* <VideoPlayer onReady={handlePlayerReady} /> */}
           <div style={{ display: curSrc === 1 ? "block" : "none" }}>
             <TCPlayer onReady={handlePlayerReady} id="player1" />
           </div>
@@ -430,7 +458,7 @@ function Main({ ws }) {
             <CustomButton>
               <img
                 onClick={() => setMuted(!muted)}
-                style={{ width: 25 }}
+                className="videoImg"
                 src={muted ? muted_on : muted_off}
                 alt=""
               />
@@ -438,7 +466,7 @@ function Main({ ws }) {
             <CustomButton>
               <img
                 onClick={toggleCamera}
-                style={{ width: 25 }}
+                className="videoImg"
                 src={camera}
                 alt=""
               />
@@ -449,7 +477,7 @@ function Main({ ws }) {
             style={{ background: "rgba(106, 106, 108, .5)", borderRadius: 50 }}
           >
             <img
-              style={{ width: 12, height: 12 }}
+              className="wifiImg"
               src={
                 delay <= 100
                   ? wifi_green
@@ -481,7 +509,7 @@ function Main({ ws }) {
                 <div className=" relative">
                   <img
                     onClick={selectGoods}
-                    width={177}
+                    className="gameStartImg"
                     src={machineState === "FREE" ? start_game : waitting}
                     alt=""
                   />
@@ -500,25 +528,27 @@ function Main({ ws }) {
                         }}
                       />
                       <div className=" flex flex-col items-start px-2">
-                        <span>{curUser.nickname}</span>
+                        <span>{name(curUser.nickname)}</span>
                         <span>游戏中</span>
                       </div>
                     </div>
                   ) : (
                     <div className=" absolute top-0 bottom-0 left-0 right-0 p-7 text-white font-semibold flex justify-center items-center">
-                      <span>机器不在线</span>
+                      <span>
+                        {machineState === "OFFLINE" ? "机器不在线" : "机器故障"}
+                      </span>
                     </div>
                   )}
                 </div>
               </CustomButton>
-              <span className="font-semibold">{userInfo.uid}</span>
+              <span className="font-semibold">ID：{userInfo.uid}</span>
             </div>
 
             <div className=" flex flex-col items-center">
               <CustomButton>
                 <img
                   onClick={() => setShowPopup(true)}
-                  style={{ width: 110, height: 110 }}
+                  className="rechargeImg"
                   src={recharge}
                   alt=""
                 />
@@ -555,55 +585,74 @@ function Main({ ws }) {
             </Tabs.Tab>
             <Tabs.Tab title="游戏记录" key="records">
               <div className=" flex flex-col">
-                {Array(13)
-                  .fill("1")
-                  .map((v, index) => (
-                    <div
-                      key={index}
-                      style={{ background: "#FFF6EF" }}
-                      className=" flex justify-between items-center rounded-lg p-2 mx-4 my-2 text-sm"
-                    >
-                      <Avatar
-                        style={{ "--size": "34px", borderRadius: "50%" }}
-                      />
-                      <span className=" flex-grow mx-2 text-black">
-                        nickname
-                      </span>
-                      <span>2024-10-31 18:43:09</span>
-                    </div>
-                  ))}
+                {records.map((item, index) => (
+                  <div
+                    key={index}
+                    style={{ background: "#FFF6EF" }}
+                    className=" flex justify-between items-center rounded-lg p-2 mx-4 my-2 text-sm"
+                  >
+                    <Avatar
+                      style={{ "--size": "2rem", borderRadius: "50%" }}
+                      src={item.avatar}
+                    />
+                    <span className=" flex-grow mx-2 text-black">
+                      {name(item.nick_name)}
+                    </span>
+                    <span>{item.create_time}</span>
+                  </div>
+                ))}
               </div>
             </Tabs.Tab>
             <Tabs.Tab
-              title={<Badge content={Badge.dot}>抓中记录</Badge>}
+              title={
+                <Badge
+                  content={
+                    myDealRecords.some((item) => item.status === 0)
+                      ? Badge.dot
+                      : null
+                  }
+                >
+                  抓中记录
+                </Badge>
+              }
               key="my_success_records"
             >
               <div className=" flex flex-col">
-                {Array(7)
-                  .fill(1)
-                  .map((v) => Math.random())
-                  .map((v, index) => (
-                    <div
-                      key={index}
-                      style={{ background: "#FFF6EF" }}
-                      className=" flex justify-between items-center rounded-lg p-2 mx-4 my-1 text-sm"
-                    >
-                      <Avatar style={{ "--size": "58px" }} />
-                      <div className=" flex flex-col justify-start flex-grow mx-2">
-                        <span className=" text-black ">商品名称</span>
-                        <span style={{ fontSize: "10px", marginTop: "6px" }}>
-                          2024-10-31 18:43:09
-                        </span>
-                      </div>
-                      <span style={{ color: "#FF5C00" }}>
-                        {v <= 0.33
-                          ? "待发货"
-                          : v <= 0.66
-                          ? "申请发货"
-                          : "已发货"}
+                {myDealRecords.map((item, index) => (
+                  <div
+                    onClick={() => {
+                      if (item.status === 0) {
+                        openAddress(item.order_id);
+                      }
+                    }}
+                    key={index}
+                    style={{ background: "#FFF6EF" }}
+                    className=" flex justify-between items-center rounded-lg p-2 mx-4 my-1 text-sm"
+                  >
+                    <Avatar
+                      style={{ "--size": "3.625rem" }}
+                      src={item.spec_img}
+                    />
+                    <div className=" flex flex-col justify-start flex-grow mx-2">
+                      <span className=" text-black ">{item.goods_name}</span>
+                      <span
+                        style={{
+                          fontSize: "0.625rem",
+                          marginTop: "0.375rem",
+                        }}
+                      >
+                        {item.create_time}
                       </span>
                     </div>
-                  ))}
+                    <span style={{ color: "#FF5C00" }}>
+                      {item.status === 0
+                        ? "申请发货"
+                        : item.status === 1
+                        ? "待发货"
+                        : "已发货"}
+                    </span>
+                  </div>
+                ))}
               </div>
             </Tabs.Tab>
           </Tabs>
@@ -633,7 +682,7 @@ function Main({ ws }) {
         </div>
         <div
           style={{
-            gridTemplateColumns: "repeat(3,112px)",
+            gridTemplateColumns: "repeat(3,7rem)",
             paddingBottom: 24,
           }}
           className=" p-3 grid place-content-between gap-y-2"
@@ -732,7 +781,12 @@ function Main({ ws }) {
             <div className=" flex justify-between w-full">
               <CustomButton>
                 {/* <div className="dialogButton" onClick={() => route("address")}> */}
-                <div className="dialogButton" onClick={openAddress}>
+                <div
+                  className="dialogButton"
+                  onClick={() => {
+                    openAddress(curOrderIdRef.current);
+                  }}
+                >
                   申请发货
                 </div>
               </CustomButton>
@@ -780,7 +834,7 @@ function Main({ ws }) {
         src={music}
         loop
       />
-    </>
+    </div>
   );
 }
 

@@ -106,6 +106,50 @@ export const getGoodsInfo = function (specGoodsId) {
 };
 
 /**
+ * 获取游戏记录
+ * @returns
+ */
+export const getRecords = function () {
+  return request({
+    url: `${apiUrl}/activity/gameRecords`,
+  });
+};
+
+/**
+ * 获取我的抓中记录
+ * @returns
+ */
+export const getMyDealRecords = function () {
+  return request({
+    headers: { resource: "wechat" },
+    url: `${apiUrl}/activity/dealRecords?token=${Cookies.get("sid")}`,
+  });
+};
+
+/**
+ * 填写发货地址
+ * @returns
+ */
+export const grabReward = function (data) {
+  const formData = new FormData();
+  formData.append("orderId", data.orderId);
+  formData.append("userName", data.userName);
+  formData.append("telNumber", data.telNumber);
+  formData.append("provinceName", data.provinceName);
+  formData.append("cityName", data.cityName);
+  formData.append("detailInfo", data.detailInfo);
+  formData.append("token", Cookies.get("sid"));
+  return request({
+    method: "POST",
+    headers: {
+      resource: "wechat",
+    },
+    url: `${apiUrl}/activity/grabReward`,
+    data: formData,
+  });
+};
+
+/**
  *生成虚拟道具支付订单
  * @param {number} specGoodsId 规格id
  * @returns
