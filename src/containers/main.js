@@ -1,4 +1,5 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
+import _ from "loadsh";
 import Cookies from "js-cookie";
 import {
   Popup,
@@ -10,7 +11,11 @@ import {
   Avatar,
   CenterPopup,
 } from "antd-mobile";
-import { CloseCircleFill } from "antd-mobile-icons";
+import {
+  CloseCircleFill,
+  EnvironmentOutline,
+  TruckOutline,
+} from "antd-mobile-icons";
 import wx from "weixin-js-sdk";
 import {
   appId,
@@ -23,6 +28,7 @@ import {
   getRecords,
   getMyDealRecords,
   grabReward,
+  ws,
 } from "../api";
 import TCPlayer from "../components/tc-player";
 import CustomButton from "../components/custom-button";
@@ -44,21 +50,46 @@ function name(str) {
   return str.length <= 1 ? str + "*" : str.replace(/(^.).*(.$)/, "$1*$2");
 }
 
-function Main({ ws }) {
-  const userInfo = Cookies.get("userInfo")
-    ? JSON.parse(Cookies.get("userInfo"))
-    : {};
+const initSocket = () => {
+  let websocket = null;
+  websocket = new WebSocket(ws);
+  websocket.onopen = () => {
+    console.log("WebSocket连接成功.");
+    const msg = {
+      cmd: "request_status",
+      ...JSON.parse(Cookies.get("userInfo")),
+    };
+    websocket.send(JSON.stringify(msg));
+  };
+  websocket.onclose = (event) => {
+    console.log("WebSocket关闭: ", event);
+    const msg = {
+      cmd: "exit_room",
+      ...JSON.parse(Cookies.get("userInfo")),
+    };
+    websocket.send(JSON.stringify(msg));
+  };
+  websocket.onerror = (event) => {
+    console.log("WebSocket发生错误: ", event);
+  };
+  return websocket;
+};
+
+function Main() {
+  const wsRef = useRef(null);
   const playerRef = useRef(null);
   const playerRef2 = useRef(null);
   const audioRef = useRef(null);
   const tickRef = useRef(null);
   const curOrderIdRef = useRef(null);
+  const curSpecGoodsIdRef = useRef(0);
   const accountRef = useRef(0);
+  const userInfoRef = useRef({});
   const costRef = useRef(0);
   const [curSrc, setCurSrc] = useState(1);
   const [cost, setCost] = useState(0);
   const [curUser, setCurUser] = useState({});
-  const [curSpecGoodsId, setCurSpecGoodsId] = useState(0);
+  const [userInfo, setUserInfo] = useState({});
   const [account, setAccount] = useState(0);
   const [records, setRecords] = useState([]);
   const [myDealRecords, setMyDealRecords] = useState([]);
@@ -79,67 +110,73 @@ function Main({ ws }) {
   const [gameRes, setGameRes] = useState(null);
 
   useEffect(() => {
-    if (ws) {
-      //注册socket事件
-      ws.onmessage = (event) => {
-        handleMsg(event.data);
-      };
-      //获取游戏记录
-      getRecords().then((res) => {
-        res.code === 0 && setRecords(res.data);
-      });
-      //获取我的抓中记录
-      getMyDealRecords().then((res) => {
-        res.code === 0 && setMyDealRecords(res.data);
-      });
-      //获取房间相关信息
-      getRoomInfo().then((res) => {
-        if (res.code === 0) {
-          const { merchant_id, gift_id, once_money } = res.data;
-          // setRoom(res.data);
-          setCost(once_money);
-          costRef.current = once_money;
-          getAllSepcGoodsInfo(merchant_id).then((res) => {
-            res.code === 0 && setVirtual(res.data);
-          });
-          getAllSepcGoodsInfo(gift_id).then((res) => {
-            res.code === 0 && setSpecGoods(res.data);
-          });
-          getGoodsInfo(gift_id).then((res) => {
-            res.code === 0 && setGoods(res.data);
-          });
-          getWxConfig(window.location.href.split("#")[0]).then((r) => {
-            if (r.code === 0) {
-              const { sign, noncestr, timestamp } = r.data;
-              //配置微信sdk
-              wx.config({
-                debug: false, // 开启调试模式,调用的所有 api 的返回值会在客户端 alert 出来，若要查看传入的参数，可以在 pc 端打开，参数信息会通过 log 打出，仅在 pc 端时才会打印。
-                appId: appId, // 必填，公众号的唯一标识
-                timestamp, // 必填，生成签名的时间戳
-                nonceStr: noncestr, // 必填，生成签名的随机串
-                signature: sign, // 必填，签名
-                jsApiList: ["chooseWXPay", "openAddress"],
-              });
-              wx.ready(() => {
-                playerRef.current.src(res.data.live_url);
-                playerRef.current.play();
-                playerRef2.current.src(res.data.live_url2);
-                playerRef2.current.play();
-                audioRef.current.play();
-              });
-            }
-          });
-        }
-      });
-      //获取账户信息
-      getMyAccount().then((res) => {
-        if (res.code === 0) {
-          setAccount(res.data.account);
-          accountRef.current = res.data.account;
-        }
-      });
+    wsRef.current = initSocket();
+    if (Cookies.get("userInfo")) {
+      const user = JSON.parse(Cookies.get("userInfo"));
+      userInfoRef.current = user;
+      setUserInfo(user);
     }
-  }, [ws]);
+    wsRef.current.onmessage = (event) => {
+      handleMsg(event.data);
+    };
+    //获取账户信息
+    getMyAccount().then((res) => {
+      if (res.code === 0) {
+        setAccount(res.data.account);
+        accountRef.current = res.data.account;
+      }
+    });
+    //获取游戏记录
+    getRecords().then((res) => {
+      res.code === 0 && setRecords(res.data);
+    });
+    //获取我的抓中记录
+    getMyDealRecords().then((res) => {
+      res.code === 0 && setMyDealRecords(res.data);
+    });
+    //获取房间相关信息
+    getRoomInfo().then((res) => {
+      if (res.code === 0) {
+        const { merchant_id, gift_id, once_money } = res.data;
+        // setRoom(res.data);
+        setCost(once_money);
+        costRef.current = once_money;
+        getAllSepcGoodsInfo(merchant_id).then((res) => {
+          res.code === 0 && setVirtual(res.data);
+        });
+        getAllSepcGoodsInfo(gift_id).then((res) => {
+          res.code === 0 && setSpecGoods(res.data);
+        });
+        getGoodsInfo(gift_id).then((res) => {
+          res.code === 0 && setGoods(res.data);
+        });
+        getWxConfig(window.location.href.split("#")[0]).then((r) => {
+          if (r.code === 0) {
+            const { sign, noncestr, timestamp } = r.data;
+            //配置微信sdk
+            wx.config({
+              debug: false, // 开启调试模式,调用的所有 api 的返回值会在客户端 alert 出来，若要查看传入的参数，可以在 pc 端打开，参数信息会通过 log 打出，仅在 pc 端时才会打印。
+              appId: appId, // 必填，公众号的唯一标识
+              timestamp, // 必填，生成签名的时间戳
+              nonceStr: noncestr, // 必填，生成签名的随机串
+              signature: sign, // 必填，签名
+              jsApiList: ["chooseWXPay", "openAddress"],
+            });
+            wx.ready(() => {
+              playerRef.current.src(res.data.live_url);
+              playerRef.current.play();
+              playerRef2.current.src(res.data.live_url2);
+              playerRef2.current.play();
+              audioRef.current.play();
+            });
+          }
+        });
+      }
+    });
+    return () => {
+      wsRef.current && wsRef.current.close();
+    };
+  }, []);
 
   useEffect(() => {
     clearTimeout(tickRef.current);
@@ -165,17 +202,16 @@ function Main({ ws }) {
   const toggleCamera = () => {
     setCurSrc(curSrc === 1 ? 2 : 1);
   };
-  /**
-   *
-   * @param {number} cmd UP:0 DOWN:1 LEFT:2 RIGHT:3 GRAP:4
-   */
+
+  // UP:0 DOWN:1 LEFT:2 RIGHT:3 GRAP:4
   const handleCmd = (cmd) => {
     const msg = {
       cmd: "operation",
       type: cmd,
       ...userInfo,
     };
-    if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
+    if (wsRef.current && wsRef.current.readyState === 1)
+      wsRef.current.send(JSON.stringify(msg));
     if (cmd === 4) {
       gameOver();
     }
@@ -183,19 +219,20 @@ function Main({ ws }) {
 
   const handleMsg = (msg) => {
     const data = JSON.parse(msg);
-    console.log("收到消息：", data, Date.now());
     const { timestamp } = data;
     if (timestamp) {
-      let delay = Date.now() - timestamp;
-      if (delay < 0) delay = Math.floor(Math.random() * 100);
+      const now = Date.now();
+      let delay = now - timestamp;
+      console.log("收到消息：", data, now, delay);
+      if (delay < 0) delay = Math.floor(Math.random() * 50);
       setDelay(delay);
-      if (delay > 200) {
-        Toast.show({
-          content: "网络状况不佳",
-          maskClickable: false,
-          duration: 1000,
-        });
-      }
+      // if (delay > 200) {
+      //   Toast.show({
+      //     content: "网络状况不佳",
+      //     maskClickable: false,
+      //     duration: 1000,
+      //   });
+      // }
     }
     //收到能否开始游戏
     if (data.cmd === "start_game") {
@@ -205,7 +242,7 @@ function Main({ ws }) {
         setGameState("INGAME");
         setShowGoods(false);
         setGameRes(null);
-        setTimeLeft(30);
+        // setTimeLeft(30);
         accountRef.current = accountRef.current - costRef.current;
         setAccount(accountRef.current);
         return;
@@ -253,8 +290,8 @@ function Main({ ws }) {
         const { current_user } = data;
         setCurUser(current_user);
         const { uid, start_time } = current_user;
-        const tl = Math.floor((start_time + 30000 - Date.now()) / 1000);
-        if (uid === userInfo.uid && tl > 0) {
+        const tl = Math.round((start_time + 30000 - Date.now()) / 1000);
+        if (uid === userInfoRef.current.uid && tl > 0) {
           //继续游戏
           setGameState("INGAME");
           setShowGoods(false);
@@ -306,15 +343,24 @@ function Main({ ws }) {
     }
   };
 
-  const gameStart = (specId) => {
-    setCurSpecGoodsId(specId);
-    const msg = {
-      cmd: "start_game",
-      specGoodsId: specId ? specId : curSpecGoodsId,
-      ...userInfo,
-    };
-    if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
-  };
+  const gameStart = useCallback(
+    _.throttle(
+      (specId) => {
+        curSpecGoodsIdRef.current = specId;
+        const msg = {
+          cmd: "start_game",
+          specGoodsId: specId,
+          ...userInfo,
+        };
+        if (wsRef.current && wsRef.current.readyState === 1)
+          wsRef.current.send(JSON.stringify(msg));
+      },
+      500,
+      { trailing: false }
+    ),
+    [userInfo]
+  );
+
   const gameOver = () => {
     setTimeLeft(0);
   };
@@ -365,7 +411,7 @@ function Main({ ws }) {
             });
           } else {
             Toast.show({
-              content: res.error,
+              content: `${res.code}:${res.error}`,
               maskClickable: false,
               duration: 1000,
             });
@@ -398,7 +444,8 @@ function Main({ ws }) {
               maskClickable: false,
               duration: 1000,
               afterClose: () => {
-                setAccount(account + val);
+                accountRef.current = accountRef.current + val;
+                setAccount(accountRef.current);
                 setShowPopup(false);
               },
             });
@@ -416,7 +463,7 @@ function Main({ ws }) {
   };
 
   return (
-    <div className=" fixed h-screen w-full overflow-y-scroll">
+    <>
       <div className="main">
         <div
           className=" rounded-2xl overflow-hidden relative"
@@ -627,30 +674,77 @@ function Main({ ws }) {
                     }}
                     key={index}
                     style={{ background: "#FFF6EF" }}
-                    className=" flex justify-between items-center rounded-lg p-2 mx-4 my-1 text-sm"
+                    className=" flex flex-col rounded-lg p-2 mx-4 my-1 text-sm"
                   >
-                    <Avatar
-                      style={{ "--size": "3.625rem" }}
-                      src={item.spec_img}
-                    />
-                    <div className=" flex flex-col justify-start flex-grow mx-2">
-                      <span className=" text-black ">{item.goods_name}</span>
+                    <div className=" flex justify-between items-center">
+                      <Avatar
+                        style={{ "--size": "3.625rem" }}
+                        src={item.spec_img}
+                      />
+                      <div className=" flex flex-col justify-start flex-grow mx-2">
+                        <span className=" text-black ">{item.goods_name}</span>
+                        <span
+                          style={{
+                            fontSize: "0.625rem",
+                            marginTop: "0.375rem",
+                          }}
+                        >
+                          {item.create_time}
+                        </span>
+                      </div>
                       <span
                         style={{
-                          fontSize: "0.625rem",
-                          marginTop: "0.375rem",
+                          color: item.status === 0 ? "#FF5C00" : "#6a6868",
                         }}
                       >
-                        {item.create_time}
+                        {item.status === 0
+                          ? "申请发货"
+                          : item.status === 1
+                          ? "待发货"
+                          : "已发货"}
                       </span>
                     </div>
-                    <span style={{ color: "#FF5C00" }}>
-                      {item.status === 0
-                        ? "申请发货"
-                        : item.status === 1
-                        ? "待发货"
-                        : "已发货"}
-                    </span>
+                    {item.status !== 0 ? (
+                      <div
+                        className=" flex justify-start items-center mt-3"
+                        style={{ fontSize: "0.625rem" }}
+                      >
+                        <EnvironmentOutline fontSize="0.875rem" />
+                        <div className=" ml-3 flex flex-col justify-start">
+                          <span>{item.addr_user + "  " + item.addr_phone}</span>
+                          <span
+                            className=" font-normal"
+                            style={{ fontSize: "0.5rem" }}
+                          >
+                            {item.addr_province +
+                              item.addr_city +
+                              item.addr_detail}
+                          </span>
+                        </div>
+                      </div>
+                    ) : null}
+                    {item.status === 2 ? (
+                      <div
+                        className=" flex justify-start items-center mt-3"
+                        style={{ fontSize: "0.625rem" }}
+                      >
+                        <TruckOutline fontSize="0.875rem" />
+                        <div className=" ml-3  flex flex-col justify-start">
+                          <div>
+                            快递单号：
+                            <span className=" font-normal">
+                              {item.shipping_code}
+                            </span>
+                          </div>
+                          <div>
+                            快递公司：
+                            <span className=" font-normal">
+                              {item.shipping_name}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -676,7 +770,7 @@ function Main({ ws }) {
             onClick={() => {
               setShowPopup(false);
             }}
-            fontSize={24}
+            fontSize="2rem"
             color="#D9D9D9"
           />
         </div>
@@ -794,7 +888,7 @@ function Main({ ws }) {
                 <div
                   className="dialogButton right"
                   onClick={() => {
-                    gameStart(curSpecGoodsId);
+                    gameStart(curSpecGoodsIdRef.current);
                   }}
                 >
                   再来一局
@@ -815,7 +909,7 @@ function Main({ ws }) {
                 <div
                   className="dialogButton right"
                   onClick={() => {
-                    gameStart(curSpecGoodsId);
+                    gameStart(curSpecGoodsIdRef.current);
                   }}
                 >
                   再来一局
@@ -834,7 +928,7 @@ function Main({ ws }) {
         src={music}
         loop
       />
-    </div>
+    </>
   );
 }
 
