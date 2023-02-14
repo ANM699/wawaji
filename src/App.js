@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useLayoutEffect } from "react";
 import Cookies from "js-cookie";
 import { Mask } from "antd-mobile";
 import Main from "./containers/main";
@@ -22,7 +22,7 @@ function App() {
   //用户状态
   const [hasLogin, setHasLogin] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const { code } = getUrlParams(window.location.search);
     const sid = Cookies.get("sid");
     if (sid) {

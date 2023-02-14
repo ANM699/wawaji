@@ -10,8 +10,15 @@
   user-select: none;
 }
 body {
-  @apply !text-base min-h-screen;
+  @apply !text-base min-h-screen m-auto;
   color: #6a6868 !important;
+  background: linear-gradient(
+      180deg,
+      #ffbfbf 0%,
+      rgba(252, 167, 167, 0.46) 100%
+    )
+    repeat-x;
+  max-width: 750px;
 }
 
 @media screen and (max-width: 750px) {

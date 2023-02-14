@@ -68,9 +68,19 @@ const initSocket = () => {
       ...JSON.parse(Cookies.get("userInfo")),
     };
     websocket.send(JSON.stringify(msg));
+    Toast.show({
+      content: "连接断开，请刷新页面重试",
+      maskClickable: false,
+      duration: 1000,
+    });
   };
   websocket.onerror = (event) => {
     console.log("WebSocket发生错误: ", event);
+    Toast.show({
+      content: "连接断开，请刷新页面重试",
+      maskClickable: false,
+      duration: 1000,
+    });
   };
   return websocket;
 };
@@ -487,10 +497,10 @@ function Main() {
                 key={index}
                 src={item.avatar}
                 style={{
-                  "--size": "24px",
+                  "--size": "1.5rem",
                   borderRadius: "50%",
                   border: "1px solid #FFFFFF",
-                  marginRight: -6,
+                  marginRight: "-0.375rem",
                 }}
               />
             ))}
@@ -499,7 +509,7 @@ function Main() {
             className=" absolute right-4 bottom-16 px-2 py-3 flex flex-col justify-between space-y-2"
             style={{
               background: "rgba(106, 106, 108, .5)",
-              borderRadius: "80px",
+              borderRadius: "5rem",
             }}
           >
             <CustomButton>
@@ -568,9 +578,9 @@ function Main() {
                     <div className=" absolute top-0 bottom-0 left-0 right-0 p-7 text-white font-semibold flex justify-start items-center">
                       <Avatar
                         style={{
-                          "--size": "52px",
+                          "--size": "3.25rem",
                           borderRadius: "50%",
-                          border: "3px solid #FFFFFF",
+                          border: "0.25rem solid #FFFFFF",
                           flexShrink: 0,
                         }}
                       />
@@ -622,7 +632,7 @@ function Main() {
             style={{
               "--active-line-color": "transparent",
               "--active-title-color": "#E75706",
-              "--title-font-size": "14px",
+              "--title-font-size": "0.875rem",
               "--content-padding": 0,
             }}
             className=" font-semibold"
@@ -678,7 +688,11 @@ function Main() {
                   >
                     <div className=" flex justify-between items-center">
                       <Avatar
-                        style={{ "--size": "3.625rem" }}
+                        style={{
+                          "--size": "3.625rem",
+                          borderRadius: "0.75rem",
+                          flexShrink: 0,
+                        }}
                         src={item.spec_img}
                       />
                       <div className=" flex flex-col justify-start flex-grow mx-2">
@@ -694,6 +708,7 @@ function Main() {
                       </div>
                       <span
                         style={{
+                          flexShrink: 0,
                           color: item.status === 0 ? "#FF5C00" : "#6a6868",
                         }}
                       >
@@ -762,6 +777,8 @@ function Main() {
           borderTopRightRadius: 8,
           background: "#F5F6FA",
           overflow: "hidden",
+          width: "23.4375rem",
+          left: "auto",
         }}
       >
         <div className="font-semibold p-3 flex justify-between bg-white">
@@ -770,7 +787,7 @@ function Main() {
             onClick={() => {
               setShowPopup(false);
             }}
-            fontSize="2rem"
+            fontSize="1.5rem"
             color="#D9D9D9"
           />
         </div>
@@ -792,12 +809,12 @@ function Main() {
                 <span className=" mt-3" style={{ color: "#CB4D3D" }}>
                   {item.virtual_money}
                 </span>
-                <img src={item.spec_img} width="60 %" alt="" />
+                <img src={item.spec_img} width="60%" alt="" />
                 <span
                   className=" w-full text-white text-center"
                   style={{
                     background: "#CB4D3D",
-                    height: 26,
+                    height: "1.625rem",
                   }}
                 >
                   ¥ {item.price}
@@ -816,7 +833,7 @@ function Main() {
               onClick={() => {
                 setShowGoods(false);
               }}
-              fontSize={24}
+              fontSize="1.5rem"
               color="#D9D9D9"
             />
           </div>
@@ -827,7 +844,7 @@ function Main() {
             <div className="flex w-full justify-between ">
               <img
                 className="rounded-xl"
-                style={{ width: 106 }}
+                style={{ width: "6.625rem" }}
                 src={goods.original_img}
                 alt=""
               />
@@ -843,7 +860,7 @@ function Main() {
             </div>
             <div
               style={{
-                gridTemplateColumns: "repeat(3,95px)",
+                gridTemplateColumns: "repeat(3,6rem)",
               }}
               className=" grid place-content-between gap-y-2 overflow-y-scroll w-full"
             >
@@ -858,7 +875,7 @@ function Main() {
                         gameStart(item.item_id);
                       }}
                     />
-                    <span style={{ fontSize: 10, lineHeight: 1.4 }}>
+                    <span style={{ fontSize: "0.625rem", lineHeight: 1.4 }}>
                       {item.spec[0]?.value}
                     </span>
                   </div>
