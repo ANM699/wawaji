@@ -154,7 +154,7 @@ export const grabReward = function (data) {
  * @param {number} specGoodsId 规格id
  * @returns
  */
-export const createOrder = (specGoodsId) => {
+export const createOrder = (specGoodsId, openId) => {
   return request({
     method: "POST",
     url: `${apiUrl}/user/createOrder?token=${Cookies.get("sid")}`,
@@ -164,6 +164,7 @@ export const createOrder = (specGoodsId) => {
       payType: 5,
       addressId: 0,
       virtual: 1,
+      openId,
     }),
   });
 };

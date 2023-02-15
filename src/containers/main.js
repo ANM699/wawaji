@@ -47,7 +47,7 @@ import music from "../assets/music.mp3";
 import "./main.css";
 
 function name(str) {
-  return str.length <= 1 ? str + "*" : str.replace(/(^.).*(.$)/, "$1*$2");
+  return str.length <= 1 ? str + "**" : str.replace(/(^.).*(.$)/, "$1**$2");
 }
 
 const initSocket = () => {
@@ -86,6 +86,7 @@ const initSocket = () => {
 };
 
 function Main() {
+  console.log(wx);
   const wsRef = useRef(null);
   const playerRef = useRef(null);
   const playerRef2 = useRef(null);
@@ -126,6 +127,7 @@ function Main() {
       userInfoRef.current = user;
       setUserInfo(user);
     }
+    curSpecGoodsIdRef.current = Cookies.get("curSpecGoodsId") || 0;
     wsRef.current.onmessage = (event) => {
       handleMsg(event.data);
     };
@@ -166,11 +168,16 @@ function Main() {
             //配置微信sdk
             wx.config({
               debug: false, // 开启调试模式,调用的所有 api 的返回值会在客户端 alert 出来，若要查看传入的参数，可以在 pc 端打开，参数信息会通过 log 打出，仅在 pc 端时才会打印。
-              appId: appId, // 必填，公众号的唯一标识
+              appId, // 必填，公众号的唯一标识
               timestamp, // 必填，生成签名的时间戳
               nonceStr: noncestr, // 必填，生成签名的随机串
               signature: sign, // 必填，签名
-              jsApiList: ["chooseWXPay", "openAddress"],
+              jsApiList: [
+                "chooseWXPay",
+                "openAddress",
+                "onMenuShareAppMessage",
+                "onMenuShareTimeline",
+              ],
             });
             wx.ready(() => {
               playerRef.current.src(res.data.live_url);
@@ -178,6 +185,14 @@ function Main() {
               playerRef2.current.src(res.data.live_url2);
               playerRef2.current.play();
               audioRef.current.play();
+              const shareData = {
+                title: "在线娃娃机", // 分享标题
+                desc: "这里是描述", // 分享描述
+                link: window.location.href.split("#")[0], // 分享链接，该链接域名或路径必须与当前页面对应的公众号 JS 安全域名一致
+                imgUrl: "", // 分享图标
+              };
+              wx.onMenuShareAppMessage(shareData);
+              wx.onMenuShareTimeline(shareData);
             });
           }
         });
@@ -230,8 +245,8 @@ function Main() {
   const handleMsg = (msg) => {
     const data = JSON.parse(msg);
     const { timestamp } = data;
+    const now = Date.now();
     if (timestamp) {
-      const now = Date.now();
       let delay = now - timestamp;
       console.log("收到消息：", data, now, delay);
       if (delay < 0) delay = Math.floor(Math.random() * 50);
@@ -252,7 +267,7 @@ function Main() {
         setGameState("INGAME");
         setShowGoods(false);
         setGameRes(null);
-        // setTimeLeft(30);
+        // setTimeLeft(60);
         accountRef.current = accountRef.current - costRef.current;
         setAccount(accountRef.current);
         return;
@@ -263,7 +278,7 @@ function Main() {
           maskClickable: false,
           duration: 1000,
           afterClose: () => {
-            setShowGoods(false);
+            gameReady();
             setShowPopup(true);
           },
         });
@@ -275,7 +290,7 @@ function Main() {
           maskClickable: false,
           duration: 1000,
           afterClose: () => {
-            setShowGoods(true);
+            gameReady();
           },
         });
         return;
@@ -300,7 +315,15 @@ function Main() {
         const { current_user } = data;
         setCurUser(current_user);
         const { uid, start_time } = current_user;
-        const tl = Math.round((start_time + 30000 - Date.now()) / 1000);
+        // console.log(
+        //   "开始时间：",
+        //   start_time,
+        //   "当前时间：",
+        //   now,
+        //   "剩余时间：",
+        //   start_time + 60000 - now
+        // );
+        const tl = Math.round((start_time + 60000 - now) / 1000);
         if (uid === userInfoRef.current.uid && tl > 0) {
           //继续游戏
           setGameState("INGAME");
@@ -357,6 +380,7 @@ function Main() {
     _.throttle(
       (specId) => {
         curSpecGoodsIdRef.current = specId;
+        Cookies.set("curSpecGoodsId", specId);
         const msg = {
           cmd: "start_game",
           specGoodsId: specId,
@@ -432,7 +456,7 @@ function Main() {
   };
 
   const wxpay = (specGoodsId, val) => {
-    createOrder(specGoodsId).then((res) => {
+    createOrder(specGoodsId, userInfoRef.current.openId).then((res) => {
       if (res.code === 0) {
         const {
           timeStamp,
@@ -564,12 +588,23 @@ function Main() {
             <div className=" flex flex-col items-center">
               <CustomButton enable={machineState === "FREE"}>
                 <div className=" relative">
-                  <img
+                  {/* <img
                     onClick={selectGoods}
                     className="gameStartImg"
                     src={machineState === "FREE" ? start_game : waitting}
                     alt=""
-                  />
+                  /> */}
+                  <div
+                    onClick={selectGoods}
+                    className="gameStartImg"
+                    style={{
+                      backgroundSize: "cover",
+                      backgroundImage:
+                        machineState === "FREE"
+                          ? `url(${start_game})`
+                          : `url(${waitting})`,
+                    }}
+                  ></div>
                   {machineState === "FREE" ? (
                     <span className=" absolute bottom-5 w-full text-center text-white font-semibold">
                       {cost}币/次
@@ -583,6 +618,7 @@ function Main() {
                           border: "0.25rem solid #FFFFFF",
                           flexShrink: 0,
                         }}
+                        src={curUser.avatar}
                       />
                       <div className=" flex flex-col items-start px-2">
                         <span>{name(curUser.nickname)}</span>
@@ -603,12 +639,20 @@ function Main() {
 
             <div className=" flex flex-col items-center">
               <CustomButton>
-                <img
+                {/* <img
                   onClick={() => setShowPopup(true)}
                   className="rechargeImg"
                   src={recharge}
                   alt=""
-                />
+                /> */}
+                <div
+                  onClick={() => setShowPopup(true)}
+                  className="rechargeImg"
+                  style={{
+                    backgroundSize: "cover",
+                    backgroundImage: `url(${recharge})`,
+                  }}
+                ></div>
               </CustomButton>
               <span className="font-semibold">余币：{account}</span>
             </div>
@@ -699,7 +743,7 @@ function Main() {
                         <span className=" text-black ">{item.goods_name}</span>
                         <span
                           style={{
-                            fontSize: "0.625rem",
+                            fontSize: "0.75rem",
                             marginTop: "0.375rem",
                           }}
                         >
@@ -722,15 +766,12 @@ function Main() {
                     {item.status !== 0 ? (
                       <div
                         className=" flex justify-start items-center mt-3"
-                        style={{ fontSize: "0.625rem" }}
+                        style={{ fontSize: "0.75rem" }}
                       >
-                        <EnvironmentOutline fontSize="0.875rem" />
+                        <EnvironmentOutline fontSize="1rem" />
                         <div className=" ml-3 flex flex-col justify-start">
                           <span>{item.addr_user + "  " + item.addr_phone}</span>
-                          <span
-                            className=" font-normal"
-                            style={{ fontSize: "0.5rem" }}
-                          >
+                          <span className=" font-normal">
                             {item.addr_province +
                               item.addr_city +
                               item.addr_detail}
@@ -740,10 +781,10 @@ function Main() {
                     ) : null}
                     {item.status === 2 ? (
                       <div
-                        className=" flex justify-start items-center mt-3"
-                        style={{ fontSize: "0.625rem" }}
+                        className=" flex justify-start items-center mt-2"
+                        style={{ fontSize: "0.75rem" }}
                       >
-                        <TruckOutline fontSize="0.875rem" />
+                        <TruckOutline fontSize="1rem" />
                         <div className=" ml-3  flex flex-col justify-start">
                           <div>
                             快递单号：

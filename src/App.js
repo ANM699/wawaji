@@ -24,10 +24,7 @@ function App() {
 
   useLayoutEffect(() => {
     const { code } = getUrlParams(window.location.search);
-    const sid = Cookies.get("sid");
-    if (sid) {
-      setHasLogin(true);
-    } else if (!sid && code) {
+    if (code) {
       //有code说明已经同意授权
       getSid(code).then((res) => {
         const userInfo = {
@@ -36,10 +33,25 @@ function App() {
           nickname: res.user.nickname,
         };
         Cookies.set("userInfo", JSON.stringify(userInfo));
-        Cookies.set("sid", res.sid);
+        Cookies.set("sid", res.sid, { expires: 1 });
         setHasLogin(true);
       });
     }
+    // if (sid) {
+    //   setHasLogin(true);
+    // } else if (!sid && code) {
+    //   //有code说明已经同意授权
+    //   getSid(code).then((res) => {
+    //     const userInfo = {
+    //       uid: res.user.userId,
+    //       avatar: res.user.avatar,
+    //       nickname: res.user.nickname,
+    //     };
+    //     Cookies.set("userInfo", JSON.stringify(userInfo));
+    //     Cookies.set("sid", res.sid, { expires: 1 });
+    //     setHasLogin(true);
+    //   });
+    // }
   }, []);
 
   return (
