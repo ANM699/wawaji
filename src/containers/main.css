@@ -4,6 +4,12 @@ video:focus {
 
 .main {
   @apply flex flex-col p-2;
+  background: linear-gradient(
+      180deg,
+      #ffbfbf 0%,
+      rgba(252, 167, 167, 0.46) 100%
+    )
+    repeat-x;
 }
 
 .overlayDialog {
@@ -13,9 +19,12 @@ video:focus {
   color: #565656;
 }
 
+.adm-center-popup-wrap {
+  max-width: 100% !important;
+}
+
 .overlayContainer {
-  @apply flex flex-col items-center rounded-lg  overflow-hidden m-auto;
-  margin-top: 14vh;
+  @apply flex flex-col items-center rounded-lg overflow-hidden;
   width: 22.4375rem;
   background: #f5f6fa;
 }

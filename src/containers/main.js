@@ -4,12 +4,13 @@ import Cookies from "js-cookie";
 import {
   Popup,
   SafeArea,
-  Mask,
   Toast,
   Tabs,
   Badge,
   Avatar,
   CenterPopup,
+  InfiniteScroll,
+  ResultPage,
 } from "antd-mobile";
 import {
   CloseCircleFill,
@@ -19,7 +20,7 @@ import {
 import wx from "weixin-js-sdk";
 import {
   appId,
-  getRoomInfo,
+  redirect_uri,
   getGoodsInfo,
   getAllSepcGoodsInfo,
   createOrder,
@@ -50,54 +51,22 @@ function name(str) {
   return str.length <= 1 ? str + "**" : str.replace(/(^.).*(.$)/, "$1**$2");
 }
 
-const initSocket = () => {
-  let websocket = null;
-  websocket = new WebSocket(ws);
-  websocket.onopen = () => {
-    console.log("WebSocket连接成功.");
-    const msg = {
-      cmd: "request_status",
-      ...JSON.parse(Cookies.get("userInfo")),
-    };
-    websocket.send(JSON.stringify(msg));
-  };
-  websocket.onclose = (event) => {
-    console.log("WebSocket关闭: ", event);
-    const msg = {
-      cmd: "exit_room",
-      ...JSON.parse(Cookies.get("userInfo")),
-    };
-    websocket.send(JSON.stringify(msg));
-    Toast.show({
-      content: "连接断开，请刷新页面重试",
-      maskClickable: false,
-      duration: 1000,
-    });
-  };
-  websocket.onerror = (event) => {
-    console.log("WebSocket发生错误: ", event);
-    Toast.show({
-      content: "连接断开，请刷新页面重试",
-      maskClickable: false,
-      duration: 1000,
-    });
-  };
-  return websocket;
-};
-
-function Main() {
-  console.log(wx);
+function Main({ room }) {
   const wsRef = useRef(null);
   const playerRef = useRef(null);
   const playerRef2 = useRef(null);
   const audioRef = useRef(null);
   const tickRef = useRef(null);
   const curOrderIdRef = useRef(null);
-  const curSpecGoodsIdRef = useRef(0);
-  const accountRef = useRef(0);
   const userInfoRef = useRef({});
+  const curSpecGoodsIdRef = useRef(0);
+  const records_page = useRef(1);
+  const myDealRecords_page = useRef(1);
+  const accountRef = useRef(0);
   const costRef = useRef(0);
-  const [curSrc, setCurSrc] = useState(1);
+  const curSrcRef = useRef(1);
+  const [hasMoreRecords, setHasMoreRecords] = useState(true);
+  const [hasMoreMyDealRecords, setHasMoreMyDealRecords] = useState(true);
   const [cost, setCost] = useState(0);
   const [curUser, setCurUser] = useState({});
   const [userInfo, setUserInfo] = useState({});
@@ -111,6 +80,7 @@ function Main() {
   const [specGoods, setSpecGoods] = useState([]);
   const [timeLeft, setTimeLeft] = useState(0);
   const [muted, setMuted] = useState(true);
+  const [showReConnect, setShowReConnect] = useState(false);
   const [showGoods, setShowGoods] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   //游戏状态(GAMEREADY:不在游戏中,INGAME:游戏中)
@@ -121,16 +91,13 @@ function Main() {
   const [gameRes, setGameRes] = useState(null);
 
   useEffect(() => {
-    wsRef.current = initSocket();
+    initSocket();
     if (Cookies.get("userInfo")) {
       const user = JSON.parse(Cookies.get("userInfo"));
       userInfoRef.current = user;
       setUserInfo(user);
     }
     curSpecGoodsIdRef.current = Cookies.get("curSpecGoodsId") || 0;
-    wsRef.current.onmessage = (event) => {
-      handleMsg(event.data);
-    };
     //获取账户信息
     getMyAccount().then((res) => {
       if (res.code === 0) {
@@ -139,65 +106,58 @@ function Main() {
       }
     });
     //获取游戏记录
-    getRecords().then((res) => {
-      res.code === 0 && setRecords(res.data);
-    });
+    reqRecords();
     //获取我的抓中记录
-    getMyDealRecords().then((res) => {
-      res.code === 0 && setMyDealRecords(res.data);
-    });
+    reqMyDealRecords();
     //获取房间相关信息
-    getRoomInfo().then((res) => {
+    // getRoomInfo().then((res) => {
+    // if (res.code === 0) {
+    const { merchant_id, gift_id, once_money } = room;
+    // setRoom(res.data);
+    setCost(once_money);
+    costRef.current = once_money;
+    getAllSepcGoodsInfo(merchant_id).then((res) => {
+      res.code === 0 && setVirtual(res.data);
+    });
+    getGoodsInfo(gift_id).then((res) => {
+      res.code === 0 && setGoods(res.data);
+    });
+    getWxConfig(window.location.href.split("#")[0]).then((res) => {
       if (res.code === 0) {
-        const { merchant_id, gift_id, once_money } = res.data;
-        // setRoom(res.data);
-        setCost(once_money);
-        costRef.current = once_money;
-        getAllSepcGoodsInfo(merchant_id).then((res) => {
-          res.code === 0 && setVirtual(res.data);
+        const { sign, noncestr, timestamp } = res.data;
+        //配置微信sdk
+        wx.config({
+          debug: false, // 开启调试模式,调用的所有 api 的返回值会在客户端 alert 出来，若要查看传入的参数，可以在 pc 端打开，参数信息会通过 log 打出，仅在 pc 端时才会打印。
+          appId, // 必填，公众号的唯一标识
+          timestamp, // 必填，生成签名的时间戳
+          nonceStr: noncestr, // 必填，生成签名的随机串
+          signature: sign, // 必填，签名
+          jsApiList: [
+            "chooseWXPay",
+            "openAddress",
+            "onMenuShareAppMessage",
+            "onMenuShareTimeline",
+          ],
         });
-        getAllSepcGoodsInfo(gift_id).then((res) => {
-          res.code === 0 && setSpecGoods(res.data);
-        });
-        getGoodsInfo(gift_id).then((res) => {
-          res.code === 0 && setGoods(res.data);
-        });
-        getWxConfig(window.location.href.split("#")[0]).then((r) => {
-          if (r.code === 0) {
-            const { sign, noncestr, timestamp } = r.data;
-            //配置微信sdk
-            wx.config({
-              debug: false, // 开启调试模式,调用的所有 api 的返回值会在客户端 alert 出来，若要查看传入的参数，可以在 pc 端打开，参数信息会通过 log 打出，仅在 pc 端时才会打印。
-              appId, // 必填，公众号的唯一标识
-              timestamp, // 必填，生成签名的时间戳
-              nonceStr: noncestr, // 必填，生成签名的随机串
-              signature: sign, // 必填，签名
-              jsApiList: [
-                "chooseWXPay",
-                "openAddress",
-                "onMenuShareAppMessage",
-                "onMenuShareTimeline",
-              ],
-            });
-            wx.ready(() => {
-              playerRef.current.src(res.data.live_url);
-              playerRef.current.play();
-              playerRef2.current.src(res.data.live_url2);
-              playerRef2.current.play();
-              audioRef.current.play();
-              const shareData = {
-                title: "在线娃娃机", // 分享标题
-                desc: "这里是描述", // 分享描述
-                link: window.location.href.split("#")[0], // 分享链接，该链接域名或路径必须与当前页面对应的公众号 JS 安全域名一致
-                imgUrl: "", // 分享图标
-              };
-              wx.onMenuShareAppMessage(shareData);
-              wx.onMenuShareTimeline(shareData);
-            });
-          }
+        wx.ready(() => {
+          playerRef.current.src(room.live_url);
+          playerRef.current.play();
+          playerRef2.current.src(room.live_url2);
+          playerRef2.current.play();
+          audioRef.current.play();
+          const shareData = {
+            title: "明星娃娃机", // 分享标题
+            desc: "百视通明星直播间专属在线娃娃机活动，明星周边，直播间福利抓不停", // 分享描述
+            link: redirect_uri, // 分享链接，该链接域名或路径必须与当前页面对应的公众号 JS 安全域名一致
+            imgUrl: "", // 分享图标
+          };
+          wx.onMenuShareAppMessage(shareData);
+          wx.onMenuShareTimeline(shareData);
         });
       }
     });
+    // }
+    // });
     return () => {
       wsRef.current && wsRef.current.close();
     };
@@ -217,15 +177,95 @@ function Main() {
     }
   }, [timeLeft, gameState]);
 
+  const initSocket = () => {
+    wsRef.current = new WebSocket(ws);
+    wsRef.current.onopen = () => {
+      console.log("WebSocket连接成功.");
+      setShowReConnect(false);
+      const msg = {
+        cmd: "request_status",
+        ...userInfoRef.current,
+      };
+      wsRef.current.send(JSON.stringify(msg));
+      console.log("发送消息：", msg);
+    };
+    wsRef.current.onclose = (event) => {
+      console.log("WebSocket关闭: ", event);
+      const msg = {
+        cmd: "exit_room",
+        ...userInfoRef.current,
+      };
+      wsRef.current.send(JSON.stringify(msg));
+      console.log("发送消息：", msg);
+      setShowReConnect(true);
+    };
+    wsRef.current.onerror = (event) => {
+      console.log("WebSocket发生错误: ", event);
+      setShowReConnect(true);
+    };
+    wsRef.current.onmessage = (event) => {
+      handleMsg(event.data);
+    };
+  };
+
+  //获取游戏记录
+  const reqRecords = () => {
+    return getRecords(records_page.current).then((res) => {
+      if (res.code === 0) {
+        if (records_page.current === 1) {
+          setRecords(res.data);
+        } else {
+          setRecords((val) => [...val, ...res.data]);
+        }
+        setHasMoreRecords(res.data.length > 0);
+        if (res.data.length > 0) records_page.current += 1;
+      }
+    });
+  };
+
+  //获取我的抓中记录
+  const reqMyDealRecords = () => {
+    return getMyDealRecords(myDealRecords_page.current).then((res) => {
+      if (res.code === 0) {
+        if (myDealRecords_page.current === 1) {
+          setMyDealRecords(res.data);
+        } else {
+          setMyDealRecords((val) => [...val, ...res.data]);
+        }
+        setHasMoreMyDealRecords(res.data.length > 0);
+        if (res.data.length > 0) myDealRecords_page.current += 1;
+      }
+    });
+  };
+
   const handlePlayerReady = (player) => {
     playerRef.current = player;
+    player.on("error", function (error) {
+      setMachineState("ERROR");
+      Toast.show({
+        content: "机器故障",
+        maskClickable: false,
+        duration: 1000,
+      });
+      console.log("player1:", error);
+    });
   };
   const handlePlayerReady2 = (player) => {
     playerRef2.current = player;
+
+    player.on("error", function (error) {
+      setMachineState("ERROR");
+      Toast.show({
+        content: "机器故障",
+        maskClickable: false,
+        duration: 1000,
+      });
+      console.log("player2:", error);
+    });
   };
 
   const toggleCamera = () => {
-    setCurSrc(curSrc === 1 ? 2 : 1);
+    curSrcRef.current = curSrcRef.current === 1 ? 2 : 1;
   };
 
   // UP:0 DOWN:1 LEFT:2 RIGHT:3 GRAP:4
@@ -237,6 +277,7 @@ function Main() {
     };
     if (wsRef.current && wsRef.current.readyState === 1)
       wsRef.current.send(JSON.stringify(msg));
+    console.log("发送消息：", msg);
     if (cmd === 4) {
       gameOver();
     }
@@ -297,7 +338,7 @@ function Main() {
       } else if (ret === -3) {
         //机器被占用
         Toast.show({
-          content: "机器繁忙，请稍后再试",
+          content: "有人在玩啦，请稍后再试",
           maskClickable: false,
           duration: 1000,
           afterClose: () => {
@@ -334,9 +375,8 @@ function Main() {
       } else if (status === "leisure") {
         setMachineState("FREE");
         //更新游戏记录
-        getRecords().then((res) => {
-          res.code === 0 && setRecords(res.data);
-        });
+        records_page.current = 1;
+        reqRecords();
         return;
       } else if (status === "offline") {
         setMachineState("OFFLINE");
@@ -348,9 +388,9 @@ function Main() {
         return;
       } else if (status === "error") {
         setMachineState("ERROR");
-        const { desc } = data;
+        // const { desc } = data;
         Toast.show({
-          content: desc,
+          content: "机器故障",
           maskClickable: false,
           duration: 1000,
         });
@@ -368,9 +408,8 @@ function Main() {
       if (data.ret === 1) {
         curOrderIdRef.current = data.orderId;
         //更新我的抓中记录
-        getMyDealRecords().then((r) => {
-          r.code === 0 && setMyDealRecords(r.data);
-        });
+        myDealRecords_page.current = 1;
+        reqMyDealRecords();
       }
       return;
     }
@@ -388,6 +427,7 @@ function Main() {
         };
         if (wsRef.current && wsRef.current.readyState === 1)
           wsRef.current.send(JSON.stringify(msg));
+        console.log("发送消息：", msg);
       },
       500,
       { trailing: false }
@@ -407,7 +447,10 @@ function Main() {
   const selectGoods = () => {
     console.log("点击了开始游戏");
     if (account >= cost) {
-      setShowGoods(true);
+      getAllSepcGoodsInfo(room.gift_id).then((res) => {
+        res.code === 0 && setSpecGoods(res.data);
+        setShowGoods(true);
+      });
     } else {
       Toast.show({
         content: "余币不足,请充值",
@@ -432,20 +475,31 @@ function Main() {
           cityName: res.cityName,
           detailInfo: res.detailInfo,
         };
-        grabReward(data).then((res) => {
-          if (res.code === 0) {
+        grabReward(data).then((r) => {
+          if (r.code === 0) {
             Toast.show({
               content: "等待发货",
               maskClickable: false,
               duration: 1000,
             });
             //更新我的抓中记录
-            getMyDealRecords().then((r) => {
-              r.code === 0 && setMyDealRecords(r.data);
-            });
+            const newMyDealRecords = myDealRecords.map((item) =>
+              item.order_id === orderId
+                ? {
+                    ...item,
+                    addr_user: res.userName,
+                    addr_phone: res.telNumber,
+                    addr_province: res.provinceName,
+                    addr_city: res.cityName,
+                    addr_detail: res.detailInfo,
+                    status: 1,
+                  }
+                : item
+            );
+            setMyDealRecords(newMyDealRecords);
           } else {
             Toast.show({
-              content: `${res.code}:${res.error}`,
+              content: `${r.code}:${r.error}`,
               maskClickable: false,
               duration: 1000,
             });
@@ -506,10 +560,10 @@ function Main() {
             transform: "translate3d(0,0,0)",
           }}
         >
-          <div style={{ display: curSrc === 1 ? "block" : "none" }}>
+          <div style={{ display: curSrcRef.current === 1 ? "block" : "none" }}>
             <TCPlayer onReady={handlePlayerReady} id="player1" />
           </div>
-          <div style={{ display: curSrc === 2 ? "block" : "none" }}>
+          <div style={{ display: curSrcRef.current === 2 ? "block" : "none" }}>
             <TCPlayer onReady={handlePlayerReady2} id="player2" />
           </div>
           <div className=" absolute top-0 p-2 flex justify-start items-center bg-black bg-opacity-30 w-full">
@@ -685,12 +739,12 @@ function Main() {
               <img className=" w-full" src={instruction} alt="" />
             </Tabs.Tab>
             <Tabs.Tab title="游戏记录" key="records">
-              <div className=" flex flex-col">
+              <div className=" flex flex-col py-1">
                 {records.map((item, index) => (
                   <div
                     key={index}
                     style={{ background: "#FFF6EF" }}
-                    className=" flex justify-between items-center rounded-lg p-2 mx-4 my-2 text-sm"
+                    className=" flex justify-between items-center rounded-lg p-2 mx-4 my-1 text-sm"
                   >
                     <Avatar
                       style={{ "--size": "2rem", borderRadius: "50%" }}
@@ -703,6 +757,7 @@ function Main() {
                   </div>
                 ))}
               </div>
+              <InfiniteScroll loadMore={reqRecords} hasMore={hasMoreRecords} />
             </Tabs.Tab>
             <Tabs.Tab
               title={
@@ -718,7 +773,7 @@ function Main() {
               }
               key="my_success_records"
             >
-              <div className=" flex flex-col">
+              <div className=" flex flex-col py-1">
                 {myDealRecords.map((item, index) => (
                   <div
                     onClick={() => {
@@ -804,6 +859,10 @@ function Main() {
                   </div>
                 ))}
               </div>
+              <InfiniteScroll
+                loadMore={reqMyDealRecords}
+                hasMore={hasMoreMyDealRecords}
+              />
             </Tabs.Tab>
           </Tabs>
         </div>
@@ -866,7 +925,7 @@ function Main() {
         </div>
         <SafeArea position="bottom" />
       </Popup>
-      <Mask visible={showGoods}>
+      <CenterPopup visible={showGoods}>
         <div className="overlayContainer">
           <div className="p-3 flex justify-between bg-white w-full font-semibold">
             选择奖品，开始游戏
@@ -906,17 +965,30 @@ function Main() {
               className=" grid place-content-between gap-y-2 overflow-y-scroll w-full"
             >
               {specGoods.map((item, index) => (
-                <CustomButton key={index}>
+                <CustomButton key={index} enable={item.store_count > 0}>
                   <div className=" flex flex-col items-center  font-semibold justify-start">
-                    <img
-                      className="rounded-xl"
-                      src={item.spec_img}
-                      alt=""
-                      onClick={() => {
-                        gameStart(item.item_id);
+                    <div className=" relative rounded-xl overflow-hidden">
+                      <img
+                        className="rounded-xl"
+                        src={item.spec_img}
+                        alt=""
+                        onClick={() => {
+                          item.store_count > 0 && gameStart(item.item_id);
+                        }}
+                      />
+                      {item.store_count <= 0 ? (
+                        <div className=" absolute left-0 right-0 top-0 bottom-0 flex justify-center items-center text-xs text-white bg-black bg-opacity-30">
+                          库存不足
+                        </div>
+                      ) : null}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "0.625rem",
+                        lineHeight: 1.4,
+                        color: item.store_count <= 0 ? "#B4B3B3" : "#6a6868",
                       }}
-                    />
-                    <span style={{ fontSize: "0.625rem", lineHeight: 1.4 }}>
+                    >
                       {item.spec[0]?.value}
                     </span>
                   </div>
@@ -925,7 +997,7 @@ function Main() {
             </div>
           </div>
         </div>
-      </Mask>
+      </CenterPopup>
       <CenterPopup visible={gameRes}>
         {gameRes === "SUCCESS" ? (
           <div className="overlayDialog">
@@ -976,6 +1048,20 @@ function Main() {
             </div>
           </div>
         ) : null}
+      </CenterPopup>
+      <CenterPopup visible={showReConnect}>
+        {
+          <div className="overlayDialog">
+            <div className=" text-2xl">连接已断开</div>
+            <div className=" flex justify-center w-full">
+              <CustomButton>
+                <div className="dialogButton right" onClick={initSocket}>
+                  重新连接
+                </div>
+              </CustomButton>
+            </div>
+          </div>
+        }
       </CenterPopup>
       <audio
         ref={audioRef}

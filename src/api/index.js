@@ -9,33 +9,30 @@ const request = function (options = {}) {
       headers,
     })
       .then((res) => {
-        if (res.status === 200) {
-          res.json().then((data) => resolve(data));
-        } else if (res.status === 500) {
-          //服务器出了点小差
-          window.location.replace(authUrl);
-        }
+        res.json().then((data) => resolve(data));
+        // if (res.status === 200) {
+        //   res.json().then((data) => resolve(data));
+        // } else if (res.status === 500) {
+        //   //服务器出了点小差
+        //   res.json().then((data) => resolve(data));
+        //   window.location.replace(authUrl_snsapi_base);
+        // }
       })
       .catch((error) => reject(error));
   });
 };
 
-const loginUrl = "https://tvapp-dev.bbtv.cn/5g/v1/official-account/auth";
-
-//测试公众号
-export const appId = "wx59bc0000891eb08f";
-export const ws = "wss://tvapp-dev.bbtv.cn:18443/websocket";
-const apiUrl = "https://tvapp-dev.bbtv.cn:28443/api";
-const redirect_uri = encodeURIComponent(
-  "https://tvapp-dev.bbtv.cn/static/build/index.html"
-);
-
-// export const appId = "wx197cf988e40cd520";//个人
-// export const ws = "ws://47.100.79.233:8088/websocket";
-// const apiUrl = "http://47.100.79.233/api";
-// const redirect_uri = encodeURIComponent("http://tvapp-dev.bbtv.cn/build");
-
-export const authUrl = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${appId}&redirect_uri=${redirect_uri}&response_type=code&scope=snsapi_userinfo#wechat_redirect`;
+const loginUrl = process.env.REACT_APP_LOGIN_URL;
+const apiUrl = process.env.REACT_APP_API_URL;
+export const appId = process.env.REACT_APP_APP_ID;
+export const ws = process.env.REACT_APP_WS;
+export const redirect_uri = process.env.REACT_APP_REDIRECT_URL;
+export const authUrl_snsapi_userinfo = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${appId}&redirect_uri=${encodeURIComponent(
+  redirect_uri
+)}&response_type=code&scope=snsapi_userinfo#wechat_redirect`;
+export const authUrl_snsapi_base = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${appId}&redirect_uri=${encodeURIComponent(
+  redirect_uri
+)}&response_type=code&scope=snsapi_base#wechat_redirect`;
 
 /**
  * 用code让服务端从微信服务器获取{access_token,unionid}，返回前端sid,userInfo
@@ -109,9 +106,9 @@ export const getGoodsInfo = function (specGoodsId) {
  * 获取游戏记录
  * @returns
  */
-export const getRecords = function () {
+export const getRecords = function (page) {
   return request({
-    url: `${apiUrl}/activity/gameRecords`,
+    url: `${apiUrl}/activity/gameRecords?page=${page}&pageSize=20`,
   });
 };
 
@@ -119,10 +116,12 @@ export const getRecords = function () {
  * 获取我的抓中记录
  * @returns
  */
-export const getMyDealRecords = function () {
+export const getMyDealRecords = function (page) {
   return request({
     headers: { resource: "wechat" },
-    url: `${apiUrl}/activity/dealRecords?token=${Cookies.get("sid")}`,
+    url: `${apiUrl}/activity/dealRecords?token=${Cookies.get(
+      "sid"
+    )}&page=${page}&pageSize=20`,
   });
 };
 
